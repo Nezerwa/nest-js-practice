@@ -27,6 +27,10 @@ export class UsersController {
   createUser(@Body() body: createUserDto) {
     return this.authService.signup(body.email, body.password);
   }
+  @Post('/signin')
+  signInUser(@Body() body: createUserDto) {
+    return this.authService.signIn(body.email, body.password);
+  }
   @Get('/users')
   findAll() {
     return this.userService.findAll();
