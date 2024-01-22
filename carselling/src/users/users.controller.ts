@@ -8,7 +8,7 @@ import {
   Patch,
   Post,
   Session,
-  UseInterceptors
+  UseGuards,
 } from '@nestjs/common';
 import { serializeDecorator } from 'src/interceptors/serialize.interceptor';
 import { AuthService } from './auth.service';
@@ -17,12 +17,11 @@ import { UpdateUserDto } from './dtos/update-user.dto';
 import { UserDto } from './dtos/user.dto';
 import { UsersService } from './users.service';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { CurrentUserInterceptor } from 'src/interceptors/current-user.interceptor';
 import { UserEntity } from 'src/user.entity';
+import { AuthenticationGuard } from 'src/guards/authenticationGuard';
 
 @Controller('auth')
 @serializeDecorator(UserDto)
-@UseInterceptors(CurrentUserInterceptor)
 export class UsersController {
   constructor(
     private userService: UsersService,
@@ -30,8 +29,9 @@ export class UsersController {
   ) {}
 
   @Get('/whoami')
+  @UseGuards(AuthenticationGuard)
   whoAmI(@CurrentUser() user: UserEntity) {
-    return user;
+    return user.email;
   }
   @Post('signout')
   signOut(@Session() session: any) {
@@ -42,7 +42,6 @@ export class UsersController {
     const user = await this.authService.signup(body.email, body.password);
 
     session.userId = user.id;
-    console.log(session);
     return user;
   }
   @Post('/signin')
@@ -50,7 +49,6 @@ export class UsersController {
     const user = await this.authService.signIn(body.email, body.password);
 
     session.userId = user.id;
-    console.log(session);
     return user;
   }
   @Get('/users')
