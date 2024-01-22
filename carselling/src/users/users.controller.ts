@@ -3,33 +3,55 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
-  Query,
-  NotFoundException,
+  Session,
+  UseInterceptors
 } from '@nestjs/common';
-import { createUserDto } from './dtos/create-user.dto';
-import { UsersService } from './users.service';
-import { UpdateUserDto } from './dtos/update-user.dto';
 import { serializeDecorator } from 'src/interceptors/serialize.interceptor';
-import { UserDto } from './dtos/user.dto';
 import { AuthService } from './auth.service';
+import { createUserDto } from './dtos/create-user.dto';
+import { UpdateUserDto } from './dtos/update-user.dto';
+import { UserDto } from './dtos/user.dto';
+import { UsersService } from './users.service';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { CurrentUserInterceptor } from 'src/interceptors/current-user.interceptor';
+import { UserEntity } from 'src/user.entity';
 
 @Controller('auth')
 @serializeDecorator(UserDto)
+@UseInterceptors(CurrentUserInterceptor)
 export class UsersController {
   constructor(
     private userService: UsersService,
     private authService: AuthService,
   ) {}
+
+  @Get('/whoami')
+  whoAmI(@CurrentUser() user: UserEntity) {
+    return user;
+  }
+  @Post('signout')
+  signOut(@Session() session: any) {
+    session.userId = null;
+  }
   @Post('/signup')
-  createUser(@Body() body: createUserDto) {
-    return this.authService.signup(body.email, body.password);
+  async createUser(@Body() body: createUserDto, @Session() session: any) {
+    const user = await this.authService.signup(body.email, body.password);
+
+    session.userId = user.id;
+    console.log(session);
+    return user;
   }
   @Post('/signin')
-  signInUser(@Body() body: createUserDto) {
-    return this.authService.signIn(body.email, body.password);
+  async signInUser(@Body() body: createUserDto, @Session() session: any) {
+    const user = await this.authService.signIn(body.email, body.password);
+
+    session.userId = user.id;
+    console.log(session);
+    return user;
   }
   @Get('/users')
   findAll() {
@@ -45,10 +67,6 @@ export class UsersController {
       );
     }
     return user;
-  }
-  @Get()
-  findByEmail(@Query('email') email: string) {
-    return this.userService.findByEmail(email);
   }
   @Delete('/:id')
   removeUser(@Param('id') id: string) {

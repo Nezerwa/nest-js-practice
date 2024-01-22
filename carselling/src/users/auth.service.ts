@@ -12,25 +12,24 @@ export class AuthService {
   constructor(private userService: UsersService) {}
   async signup(email: string, password: string) {
     const users = await this.userService.findByEmail(email);
-
     if (users.length) {
       throw new BadRequestException('this email is already in used');
     }
     const salt = randomBytes(8).toString('hex');
     const hash = (await scrypt(password, salt, 32)) as Buffer;
-    const result = salt + '.' + hash;
+    const result = salt + '.' + hash.toString('hex');
     const newUser = await this.userService.createUser(email, result);
     return newUser;
   }
   async signIn(email: string, password: string) {
     const [user] = await this.userService.findByEmail(email);
     if (!user) {
-      throw new NotFoundException('user with this email is not found');
+      throw new NotFoundException('user with this email does not exist');
     }
     const [salt, storedHash] = user.password.split('.');
     const newHash = (await scrypt(password, salt, 32)) as Buffer;
     if (storedHash !== newHash.toString('hex')) {
-      throw new BadRequestException('the password is incorrect');
+      throw new BadRequestException('the password you are using is incorrect');
     }
     return user;
   }
